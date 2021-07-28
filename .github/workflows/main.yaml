@@ -40,7 +40,7 @@ jobs:
 
       - name: Integration Tests
         run: mvn integration-test
-
+      
       # Build docker image for service
       # - name: Build docker image
       #   uses: docker/build-push-action@v1
