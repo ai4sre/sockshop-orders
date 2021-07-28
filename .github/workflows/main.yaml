@@ -88,6 +88,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          dockerfile: docker/orders/Dockerfile.github
+          file: docker/orders/Dockerfile.github
           tags: |
             ghcr.io/${{ github.repository }}:latest
