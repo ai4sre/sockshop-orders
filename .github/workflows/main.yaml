@@ -16,9 +16,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      GROUP: weaveworksdemos
       COMMIT: ${{ github.sha }}
-      REPO: orders
     steps:
       - uses: actions/checkout@v2
 
@@ -44,46 +42,52 @@ jobs:
         run: mvn integration-test
 
       # Build docker image for service
-      - name: Build docker image
-        uses: docker/build-push-action@v1
-        with:
-          push: false
-          dockerfile: docker/orders/Dockerfile.github
-          repository: ${{ env.GROUP }}/${{ env.REPO }}
-          tag_with_ref: true
-          tag_with_sha: true
-          tags: ${{ github.sha }}
+      # - name: Build docker image
+      #   uses: docker/build-push-action@v1
+      #   with:
+      #     push: false
+      #     dockerfile: docker/orders/Dockerfile.github
+      #     repository: ${{ env.GROUP }}/${{ env.REPO }}
+      #     tag_with_ref: true
+      #     tag_with_sha: true
+      #     tags: ${{ github.sha }}
 
       # Build docker image for mock service
-      - name: Build mock docker image
-        uses: docker/build-push-action@v1
-        with:
-          push: false
-          path: test/json-server/
-          dockerfile: test/json-server/Dockerfile
-          repository: weaveworksdemos/json-server
-          tags: latest
+      # - name: Build mock docker image
+      #   uses: docker/build-push-action@v1
+      #   with:
+      #     push: false
+      #     path: test/json-server/
+      #     dockerfile: test/json-server/Dockerfile
+      #     repository: weaveworksdemos/json-server
+      #     tags: latest
           
-      # Run simple test against built container
-      - name: Test docker image
-        env:
-          DOCKER_BUILDKIT: 1
-        run: ./test/test.sh container.py --tag ${GITHUB_SHA}
+      # # Run simple test against built container
+      # - name: Test docker image
+      #   env:
+      #     DOCKER_BUILDKIT: 1
+      #   run: ./test/test.sh container.py --tag ${GITHUB_SHA}
 
       # Upload coverage results to coveralls
-      - name: Submit Coveralls
-        env:
-          COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
-        run: mvn -DrepoToken=${COVERALLS_TOKEN} -DserviceJobId=${GITHUB_RUN_ID} -Dbranch=${GITHUB_REF} -DpullRequest=${GITHUB_HEAD_REF} -DserviceName=GITHUB verify jacoco:report coveralls:report
+      # - name: Submit Coveralls
+      #   env:
+      #     COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+      #   run: mvn -DrepoToken=${COVERALLS_TOKEN} -DserviceJobId=${GITHUB_RUN_ID} -Dbranch=${GITHUB_REF} -DpullRequest=${GITHUB_HEAD_REF} -DserviceName=GITHUB verify jacoco:report coveralls:report
 
-      # Push to dockerhub
-      - name: Push to Docker Hub
-        uses: docker/build-push-action@v1
-        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/master'
+      - name: Login ghcr
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Push to ghcr
+      - name: Push to ghcr
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v2
+        with:
+          push: true
           dockerfile: docker/orders/Dockerfile.github
-          repository: ${{ env.GROUP }}/${{ env.REPO }}
-          tag_with_ref: true
-          tag_with_sha: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
